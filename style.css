@@ -161,20 +161,6 @@ body {
   margin-bottom: 25px;
 }
 
-.abstract-box {
-  background: #303131ff;
-  border-left: 6px solid #919191;
-  padding: 18px 22px;
-  margin-top: 15px;
-  margin-bottom: 25px;
-  border-radius: 8px;
-  font-size: 15.5px;
-  line-height: 1.65;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.08);
-}
-
-
-
 html {
   scroll-behavior: smooth;
 }

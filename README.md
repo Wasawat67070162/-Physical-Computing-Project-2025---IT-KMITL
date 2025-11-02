@@ -15,6 +15,8 @@ Alan หรือ Anti lost alarm notice เป็นอุปกรที่จ
 [ALAN_Poster.pdf](https://github.com/user-attachments/files/23289644/ALAN_Poster.pdf)
 ## Link Website
  https://wasawat67070162.github.io/-Physical-Computing-Project-2025---IT-KMITL/
+ ## Link Youtube
+ https://youtu.be/9yI9psiRu94?si=j5wOw7mQMpNAA8Eq
 ## Contributors
 67070042 ฐานพัฒน์ ทองมีรุ่งเรือง
 

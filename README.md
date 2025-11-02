@@ -11,6 +11,8 @@ Alan หรือ Anti lost alarm notice เป็นอุปกรที่จ
 เราจะใช้ bluetooth ในการเชื่อมต่อกับอุปกร หาก connection หลุดไปตามระยะที่เรากำหนัดจะเเจ้งเตือนที่โทรศัพ
 
 เเละจะมี buzzer คอยส่งเสียงที่ อุปกรที่เราติดตั้งไว้
+## Link Poster
+[ALAN_Poster.pdf](https://github.com/user-attachments/files/23289644/ALAN_Poster.pdf)
 ## Contributors
 67070042 ฐานพัฒน์ ทองมีรุ่งเรือง
 

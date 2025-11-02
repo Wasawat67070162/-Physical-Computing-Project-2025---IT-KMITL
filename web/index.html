@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Documents - A.L.A.N</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <nav class="navbar">
+    <div class="nav-left">
+      <a href="index.html">A.L.A.N</a>
+    </div>
+    <div class="nav-right">
+      <a href="#">Document</a>
+      <a href="#Members">Members</a>
+    </div>
+  </nav>
+
+  <div class="content">
+    <div style="height: 60px;"></div>
+    <h1>A.L.A.N Project</h1>
+    <p>This project is designed to monitor device connectivity. If the connection is lost, it will trigger an audible alert,<br> 
+      and users can press the Mute button to silence the alarm, with the LCD screen displaying the current mute status.</p>
+  </div>
+
+  <div class="content">
+    <h2>A.L.A.N presentation Video</h2>
+    <iframe 
+      width="640" 
+      height="360"
+      src="-"
+      title="Demo Video"
+      frameborder="0"
+      allowfullscreen>
+    </iframe>
+  </div>
+
+  <section class="section" id="used">
+  <div class="container">
+    <h2>Equipment Used</h2>
+    <div class="grid">
+      <div class="item">
+        <img src="Arduino.jpg" alt="Arduino UNO R4 WiFi">
+        <h3>Arduino UNO R4 WiFi</h3>
+        <p>A microcontroller board with built-in Wi-Fi and Bluetooth for IoT applications.</p>
+      </div>
+      <div class="item">
+        <img src="LCD.jpg" alt="LCD 16x2 Display">
+        <h3>LCD Display 16x2</h3>
+        <p>A character display module that can show 2 lines of 16 characters. Commonly used with Arduino.</p>
+      </div>
+      <div class="item">
+        <img src="Button.jpg" alt="Button">
+        <h3>Button</h3>
+        <p>A small momentary switch that connects the circuit only while pressed.</p>
+      </div>
+      <div class="item">
+        <img src="RGB_LED.png" alt="RGB LED">
+        <h3>RGB LED</h3>
+        <p>An RGB LED can display a wide range of colors by combining red, green, and blue light.</p>
+      </div>
+      <div class="item">
+        <img src="Buzzer.jpg" alt="Buzzer">
+        <h3>Buzzer</h3>
+        <p>Produces sound alerts when triggered by the system.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+  <section class="source-section" id="source">
+    <h2>Source Code</h2>
+    <div class="code-box">
+      <pre>
+#include "ArduinoBLE.h"
+#include &lt;Wire.h&gt;
+#include &lt;LiquidCrystal_I2C.h&gt;
+
+// --- Pin setup ---
+const int buzzerPin = 3;
+const int buttonPin = 2;
+
+// RGB LED (Common Cathode)
+const int redPin = 5;
+const int greenPin = 6;
+const int bluePin = 7;
+
+bool mute = false;
+
+// --- LCD setup ---
+LiquidCrystal_I2C lcd(0x27, 16, 2); // เปลี่ยน 0x27 เป็น 0x3F ถ้าไม่ขึ้น
+
+// --- BLE setup ---
+BLEService alertService("180F");
+BLECharacteristic statusChar("2A19", BLERead | BLENotify | BLEWrite, 20);
+
+void setup() {
+  Serial.begin(9600);
+
+  // --- Pin setup ---
+  pinMode(buzzerPin, OUTPUT);
+  pinMode(buttonPin, INPUT_PULLUP);
+  pinMode(redPin, OUTPUT);
+  pinMode(greenPin, OUTPUT);
+  pinMode(bluePin, OUTPUT);
+
+  // --- LCD setup ---
+  lcd.init();
+  lcd.backlight();
+  lcd.setCursor(0, 0);
+  lcd.print("Anti-Lost Alarm");
+  lcd.setCursor(0, 1);
+  lcd.print("Status: Ready");
+
+  digitalWrite(buzzerPin, HIGH);
+  setLEDDisconnected();
+
+  // --- BLE setup check---
+  if (!BLE.begin()) {
+    Serial.println("Starting BLE failed!");
+    lcd.clear();
+    lcd.print("BLE Failed!");
+    while (1);
+  }
+
+  BLE.setLocalName("ALAN");
+  BLE.setAdvertisedService(alertService);
+  alertService.addCharacteristic(statusChar);
+  BLE.addService(alertService);
+
+  statusChar.writeValue("Ready");
+  BLE.advertise();
+
+  Serial.println("BLE device ready");
+  setLEDConnected();
+}
+
+void loop() {
+  BLEDevice connectDevice = BLE.central();
+
+  readMuteButton();
+
+  if (connectDevice) {
+    Serial.print("Connected to: ");
+    Serial.println(connectDevice.address());
+    digitalWrite(buzzerPin, HIGH);
+    if (!mute) setLEDConnected();
+    sendStatus("Connected");
+
+    lcd.clear();
+    lcd.print("BLE: Connected");
+
+    while (connectDevice.connected()) {
+      readMuteButton();
+      delay(50);
+    }
+
+    Serial.print("Disconnected from: ");
+    Serial.println(connectDevice.address());
+    sendStatus("Disconnected");
+
+    lcd.clear();
+    lcd.print("BLE: Lost");
+
+    if (!mute) {
+      lcd.setCursor(0, 1);
+      lcd.print("Alarm Triggered!");
+
+      for (int i = 0; i < 10; i++) {
+        digitalWrite(buzzerPin, LOW);
+        setLEDDisconnected();
+        delay(300);
+        digitalWrite(buzzerPin, HIGH);
+        turnOffLED();
+        delay(300);
+      }
+    } else {
+      lcd.setCursor(0, 1);
+      lcd.print("Mute ON, Safe");
+      setLEDMuteON();
+    }
+  }
+}
+
+// --- อ่านปุ่ม mute ---
+void readMuteButton() {
+  static bool lastButton = HIGH;
+  bool buttonState = digitalRead(buttonPin);
+
+  if (buttonState == LOW && lastButton == HIGH) {
+    mute = !mute;
+    Serial.print(" Mute toggled: ");
+    Serial.println(mute ? "ON" : "OFF");
+
+    digitalWrite(buzzerPin, LOW);
+    delay(100);
+    digitalWrite(buzzerPin, HIGH);
+
+    if (mute) {
+      setLEDMuteON();
+      sendStatus("Mute ON");
+      lcd.clear();
+      lcd.print("Mute: ON");
+    } else {
+      setLEDConnected();
+      sendStatus("Mute OFF");
+      lcd.clear();
+      lcd.print("Mute: OFF");
+    }
+
+    delay(250);
+  }
+
+  lastButton = buttonState;
+}
+
+// --- ส่งข้อความ BLE ---
+void sendStatus(const char* message) {
+  statusChar.writeValue(message);
+}
+
+// --- LED Functions ---
+void setLEDConnected() {
+  digitalWrite(redPin, HIGH);
+  digitalWrite(greenPin, LOW);
+  digitalWrite(bluePin, LOW);
+}
+
+void setLEDDisconnected() {
+  digitalWrite(redPin, LOW);
+  digitalWrite(greenPin, HIGH);
+  digitalWrite(bluePin, HIGH);
+}
+
+void setLEDMuteON() {
+  digitalWrite(redPin, LOW);
+  digitalWrite(greenPin, LOW);
+  digitalWrite(bluePin, HIGH);
+}
+
+void turnOffLED() {
+  digitalWrite(redPin, LOW);
+  digitalWrite(greenPin, LOW);
+  digitalWrite(bluePin, LOW);
+}
+      </pre>
+    </div>
+  </div>
+
+  <section class="section" id="Members">
+    <div class="container">
+      <h2>Members</h2>
+      <div class="grid">
+        <div class="item">
+          <img src="Boom.jpg" alt="Member 1">
+          <h3>Thanaphat T</h3>
+          <p>67070042</p>
+        </div>
+        <div class="item">
+          <img src="Soul.jpg" alt="Member 2">
+          <h3>Tananan J</h3>
+          <p>67070064</p>
+        </div>
+        <div class="item">
+          <img src="Peak.jpg" alt="Member 3">
+          <h3>Wasawat N</h3>
+          <p>67070162</p>
+        </div>
+        </div>
+      </div>
+    </div>
+  </section>
+</body>
+</html>
